@@ -6,7 +6,7 @@ A pure Python implementation of the [INDI](http://indilib.org/) protocol.
 
 This is a pure Python implementation of the INDI XML based wire protocol.
 In its current form it is not a drop in replacement for
-[pyindi](https://sourceforge.net/projects/pyindi-client/). Please the
+[pyindi](https://sourceforge.net/projects/pyindi-client/). Please see the
 examples folder for both client and driver examples.
 
 #### Notes ####
