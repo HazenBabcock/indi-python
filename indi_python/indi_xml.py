@@ -36,20 +36,22 @@ class IndiXMLException(Exception):
 
 class INDIBase(object):
     """
-    INDI object base classes.
+    INDI command base classes.
     """
-    def __init__(self, etype, value, kwargs, xml):
+    def __init__(self, etype, value, attr_dict, etree):
         self.etype = etype
         self.attr = {}
 
-        if kwargs is not None:
-            for arg in kwargs:
-                self.addAttr(arg, kwargs[arg])
-        elif xml is not None:
-            pass
+        if attr_dict is not None:
+            for key in attr_dict:
+                self.addAttr(key, attr_dict[key])
+        elif etree is not None:
+            self.etype = etree.tag
+            for key in etree.attrib:
+                self.addAttr(key, etree.attrib[key])
         else:
-            raise IndiXMLException("Dictionary of arguments or XML required.")
-        
+            raise IndiXMLException("Dictionary of arguments or XML ElementTree required.")
+
     def addAttr(self, name, value):
         self.attr[name] = value
 
@@ -62,30 +64,29 @@ class INDIBase(object):
     def setAttr(self, name, value):
         self.attr[name] = value
 
-    def toXML(self):
-        xml = ElementTree.Element(self.etype)
+    def toETree(self):
+        etree = ElementTree.Element(self.etype)
 
         # Add attributes.
         for key in self.attr:
+            etree.set(key, str(self.attr[key]))
 
-            #
-            # Avoid Python keywords..
-            #
-            if (key == "iformat"):
-                xml.set("format", str(self.attr[key]))
-            else:
-                xml.set(key, str(self.attr[key]))
+        return etree
 
-        return xml
+    def toXML(self):
+        return ElementTree.tostring(self.toETree(), 'utf-8')
 
     
 class INDIElement(INDIBase):
     """
-    INDI element base class.
+    INDI element command base class.
     """
-    def __init__(self, etype, value, kwargs, xml):
-        INDIBase.__init__(self, etype, value, kwargs, xml)
+    def __init__(self, etype, value, attr_dict, etree):
+        INDIBase.__init__(self, etype, value, attr_dict, etree)
         self.value = value
+
+        if etree is not None:
+            self.value = etree.text
         
     def getValue(self):
         return self.value
@@ -93,27 +94,105 @@ class INDIElement(INDIBase):
     def setValue(self, value):
         self.value = value
         
-    def toXML(self):
-        xml = INDIBase.toXML(self)
-        xml.text = str(self.value)
-        return xml
+    def toETree(self):
+        etree = INDIBase.toETree(self)
+        etree.text = str(self.value)
+        return etree
 
     
 class INDIVector(INDIBase):
     """
-    INDI vector base class.
+    INDI vector command base class.
     """
-    def __init__(self, etype, alist, kwargs, xml):
-        INDIBase.__init__(self, etype, value, kwargs, xml)
+    def __init__(self, etype, alist, attr_dict, etree):
+        INDIBase.__init__(self, etype, value, attr_dict, etree)
         self.elt_list = eltlist
+
         
-        if kwargs is not None:
-            for arg in kwargs:
-                self.addAttr(arg, kwargs[arg])
-        elif xml is not None:
-            pass
-        else:
-            raise IndiXMLException("Dictionary of arguments or XML required.")
+# Classes to represent the different commands.
+class GetProperties(INDIBase):
+    pass
+
+class DefTextVector(INDIVector):
+    pass
+
+class DefText(INDIElement):
+    pass
+
+class DefNumberVector(INDIVector):
+    pass
+
+class DefNumber(INDIElement):
+    pass
+
+class DefSwitchVector(INDIVector):
+    pass
+
+class DefSwitch(INDIElement):
+    pass
+
+class DefLightVector(INDIVector):
+    pass
+
+class DefLight(INDIElement):
+    pass
+
+class DefBLOBVector(INDIVector):
+    pass
+
+class DefBLOB(INDIElement):
+    pass
+
+class SetTextVector(INDIVector):
+    pass
+
+class SetNumberVector(INDIVector):
+    pass
+
+class SetSwitchVector(INDIVector):
+    pass
+
+class SetLightVector(INDIVector):
+    pass
+
+class SetBLOBVector(INDIVector):
+    pass
+
+class Message(INDIBase):
+    pass
+
+class DelProperty(INDIBase):
+    pass
+
+class OneLight(INDIElement):
+    pass
+
+class EnableBLOB(INDIElement):
+    pass
+
+class NewTextVector(INDIVector):
+    pass
+
+class NewNumberVector(INDIVector):
+    pass
+
+class NewSwitchVector(INDIVector):
+    pass
+
+class NewBLOBVector(INDIVector):
+    pass
+
+class OneText(INDIElement):
+    pass
+
+class OneNumber(INDIElement):
+    pass
+
+class OneSwitch(INDIElement):
+    pass
+
+class OneBLOB(INDIElement):
+    pass
 
 
 #
@@ -187,25 +266,24 @@ def textValue(value):
 #
 # Notes:
 #
-# 1. If the class property is not specified it defaults to the specification key
-#    with the first letter changed to uppercase (defTextVector -> DefTextVector).
+# 1. If the xml property is not specified it defaults to the specification key.
 #
-# 2. If the xml property is not specified it defaults to the specification key.
-#
-# 3. The structure of attribute element is [name, xml name (if different), required, validator, documentation].
+# 2. The structure of attribute element is [name, xml name (if different), required, validator, documentation].
 #
 indi_spec = {
 
+    "getProperties" : {"class" : GetProperties,
+                       "xml" : "getProperties"},
+                                 
     # Commands from Device to Client.
     
-    "deviceGetProperties" : {"classname" : "GetProperties",
+    "deviceGetProperties" : {"class" : GetProperties,
                              "xml" : "getProperties",
-                             "base" : INDIBase,
                              "docs" : "Command to enable snooping messages from other devices. Once enabled, defXXX and setXXX messages for the Property with the given name and other messages from the device will be sent to this driver channel. Enables messages from all devices if device is not specified, and all Properties for the given device if name is not specified. Specifying name without device is not defined.",
                              "attributes" : [["device", None, False, nameValue, "device to snoop, or all if absent"],
                                              ["name", None, False, nameValue, "property of device to snoop, or all if absent"]]},
              
-    "defTextVector" : {"base" : INDIVector,
+    "defTextVector" : {"class" : DefTextVector,
                        "docs" : "Define a property that holds one or more text elements.",
                        "arg" : listValue,
                        "attributes" : [["device", None, True, nameValue, "Name of Device"],
@@ -218,13 +296,13 @@ indi_spec = {
                                        ["timestamp", None, False, timeValue, "Moment when these data were valid"],
                                        ["message", None, False, textValue, "Commentary"]]},
 
-    "defText" : {"base" : INDIElement,
+    "defText" : {"class" : DefText,
                  "docs" : "Define one member of a text vector.",
                  "arg" : textValue,
                  "attributes" : [["name", None, True, nameValue, "Name of this text element"],
                                  ["label", None, False, labelValue, "GUI label, or use name by default"]]},
 
-    "defNumberVector" : {"base" : INDIVector,
+    "defNumberVector" : {"class" : DefNumberVector,
                          "docs" : "Define a property that holds one or more numeric values.",
                          "arg" : listValue,
                          "attributes" : [["device", None, True, nameValue, "Name of Device"],
@@ -237,7 +315,7 @@ indi_spec = {
                                          ["timestamp", None, False, timeValue, "Moment when these data were valid"],
                                          ["message", None, False, textValue, "Commentary"]]},
 
-    "defNumber" : {"base" : INDIElement,
+    "defNumber" : {"class" : DefNumber,
                    "docs" : "Define one member of a number vector.",
                    "arg" : numberValue,
                    "attributes" : [["name", None, True, nameValue, "Name of this text element"],
@@ -247,7 +325,7 @@ indi_spec = {
                                    ["imax", "max", True, numberValue, "Maximal value, ignore if min == max"],
                                    ["step", None, True, numberValue, "Allowed increments, ignore if 0"]]},
 
-    "defSwitchVector" : {"base" : INDIVector,
+    "defSwitchVector" : {"class" : DefSwitchVector,
                          "docs" : "Define a collection of switches. Rule is only a hint for use by a GUI to decide a suitable presentation style. Rules are actually implemented wholly within the Device.",
                          "arg" : listValue,
                          "attributes" : [["device", None, True, nameValue, "Name of Device"],
@@ -261,13 +339,13 @@ indi_spec = {
                                          ["timestamp", None, False, timeValue, "Moment when these data were valid"],
                                          ["message", None, False, textValue, "Commentary"]]},
 
-    "defSwitch" : {"base" : INDIElement,
+    "defSwitch" : {"class" : DefSwitch,
                    "docs" : "Define one member of a text vector.",
                    "arg" : switchState,
                    "attributes" : [["name", None, True, nameValue, "Name of this text element"],
                                    ["label", None, False, labelValue, "GUI label, or use name by default"]]},
 
-    "defLightVector" : {"base" : INDIVector,
+    "defLightVector" : {"class" : DefLightVector,
                         "docs" : "Define a collection of passive indicator lights.",
                         "arg" : listValue,
                         "attributes" : [["device", None, True, nameValue, "Name of Device"],
@@ -278,13 +356,13 @@ indi_spec = {
                                         ["timestamp", None, False, timeValue, "Moment when these data were valid"],
                                         ["message", None, False, textValue, "Commentary"]]},
 
-    "defLight" : {"base" : INDIElement,
+    "defLight" : {"class" : DefLight,
                   "docs" : "Define one member of a light vector.",
                   "arg" : propertyState,
                   "attributes" : [["name", None, True, nameValue, "Name of this text element"],
                                   ["label", None, False, labelValue, "GUI label, or use name by default"]]},
 
-    "defBLOBVector" : {"base" : INDIVector,
+    "defBLOBVector" : {"class" : DefBLOBVector,
                        "docs" : "Define a property that holds one or more Binary Large Objects, BLOBs.",
                        "arg" : listValue,
                        "attributes" : [["device", None, True, nameValue, "Name of Device"],
@@ -297,12 +375,12 @@ indi_spec = {
                                        ["timestamp", None, False, timeValue, "Moment when these data were valid"],
                                        ["message", None, False, textValue, "Commentary"]]},
     
-    "defBLOB" : {"base" : INDIBase,
+    "defBLOB" : {"class" : DefBLOB,
                  "docs" : "Define one member of a BLOB vector. Unlike other defXXX elements, this does not contain an initial value for the BLOB.",
                  "attributes" : [["name", None, True, nameValue, "Name of this text element"],
                                  ["label", None, False, labelValue, "GUI label, or use name by default"]]},
 
-    "setTextVector" : {"base" : INDIVector,
+    "setTextVector" : {"class" : SetTextVector,
                        "docs" : "Send a new set of values for a Text vector, with optional new timeout, state and message.",
                        "arg" : listValue,
                        "attributes" : [["device", None, True, nameValue, "Name of Device"],
@@ -312,7 +390,7 @@ indi_spec = {
                                        ["timestamp", None, False, timeValue, "Moment when these data were valid"],
                                        ["message", None, False, textValue, "Commentary"]]},
 
-    "setNumberVector" : {"base" : INDIVector,
+    "setNumberVector" : {"class" : SetNumberVector,
                          "docs" : "Send a new set of values for a Number vector, with optional new timeout, state and message.",
                          "arg" : listValue,
                          "attributes" : [["device", None, True, nameValue, "Name of Device"],
@@ -322,7 +400,7 @@ indi_spec = {
                                          ["timestamp", None, False, timeValue, "Moment when these data were valid"],
                                          ["message", None, False, textValue, "Commentary"]]},
 
-    "setSwitchVector" : {"base" : INDIVector,
+    "setSwitchVector" : {"class" : SetSwitchVector,
                          "docs" : "Send a new set of values for a Switch vector, with optional new timeout, state and message.",
                          "arg" : listValue,
                          "attributes" : [["device", None, True, nameValue, "Name of Device"],
@@ -332,7 +410,7 @@ indi_spec = {
                                          ["timestamp", None, False, timeValue, "Moment when these data were valid"],
                                          ["message", None, False, textValue, "Commentary"]]},
 
-    "setLightVector" : {"base" : INDIVector,
+    "setLightVector" : {"class" : SetLightVector,
                         "docs" : "Send a new set of values for a Light vector, with optional new state and message.",
                         "arg" : listValue,
                         "attributes" : [["device", None, True, nameValue, "Name of Device"],
@@ -341,7 +419,7 @@ indi_spec = {
                                         ["timestamp", None, False, timeValue, "Moment when these data were valid"],
                                         ["message", None, False, textValue, "Commentary"]]},
 
-    "setBLOBVector" : {"base" : INDIVector,
+    "setBLOBVector" : {"class" : SetBLOBVector,
                        "docs" : "Send a new set of values for a BLOB vector, with optional new timeout, state and message.",
                        "arg" : listValue,
                        "attributes" : [["device", None, True, nameValue, "Name of Device"],
@@ -351,20 +429,20 @@ indi_spec = {
                                        ["timestamp", None, False, timeValue, "Moment when these data were valid"],
                                        ["message", None, False, textValue, "Commentary"]]},
 
-    "message" : {"base" : INDIBase,
+    "message" : {"class" : Message,
                  "docs" : "Send a message associated with a device or entire system.",
                  "attributes" : [["device", None, True, nameValue, "Considered to be site-wide if absent"],
                                  ["timestamp", None, False, timeValue, "Moment when this message was generated"],
                                  ["message", None, False, textValue, "Commentary"]]},
 
-    "delProperty" : {"base" : INDIBase,
+    "delProperty" : {"class" : DelProperty,
                      "docs" : "Delete the given property, or entire device if no property is specified.",
                      "attributes" : [["device", None, True, nameValue, "Name of Device"],
                                      ["name", None, False, nameValue, "Entire device if absent"],
                                      ["timestamp", None, False, timeValue, "Moment when this delete was generated"],
                                      ["message", None, False, textValue, "Commentary"]]},
 
-    "oneLight" : {"base" : INDIElement,
+    "oneLight" : {"class" : OneLight,
                   "docs" : "Send a message to specify state of one member of a Light vector.",
                   "arg" : propertyState,
                   "attributes" : [["name", None, True, nameValue, "Name of this light element"]]},
@@ -372,42 +450,41 @@ indi_spec = {
     
     # Commands from Client to Device.
 
-    "clientGetProperties" : {"classname" : "GetProperties",
+    "clientGetProperties" : {"class" : GetProperties,
                              "xml" : "getProperties",
-                             "base" : INDIBase,
                              "docs" : "Command to ask Device to define all Properties, or those for a specific Device or specific Property, for which it is responsible. Must always include protocol version.",
                              "attributes" : [["version", None, True, nameValue, "protocol version"],
                                              ["device", None, False, nameValue, "device to snoop, or all if absent"],
                                              ["name", None, False, nameValue, "property of device to snoop, or all if absent"]]},
 
-    "enableBLOB" : {"base" : INDIElement,
+    "enableBLOB" : {"class" : EnableBLOB,
                     "docs" : "Command to control whether setBLOBs should be sent to this channel from a given Device. They can be turned off completely by setting Never (the default), allowed to be intermixed with other INDI commands by setting Also or made the only command by setting Only.",
                     "arg" : BLOBEnable,
                     "attributes" : [["device", None, False, labelValue, "Name of Device"],
                                     ["name", None, False, labelValue, "Name of BLOB Property, or all if absent"]]},
 
-    "newTextVector" : {"base" : INDIVector,
+    "newTextVector" : {"class" : NewTextVector,
                        "docs" : "Send new target text values.",
                        "arg" : listValue,
                        "attributes" : [["device", None, True, nameValue, "Name of Device"],
                                        ["name", None, True, nameValue, "Name of Property"],
                                        ["timestamp", None, False, timeValue, "Moment when this message was generated"]]},
 
-    "newNumberVector" : {"base" : INDIVector,
+    "newNumberVector" : {"class" : NewNumberVector,
                          "docs" : "Send new target numeric values.",
                          "arg" : listValue,
                          "attributes" : [["device", None, True, nameValue, "Name of Device"],
                                          ["name", None, True, nameValue, "Name of Property"],
                                          ["timestamp", None, False, timeValue, "Moment when this message was generated"]]},
 
-    "newSwitchVector" : {"base" : INDIVector,
+    "newSwitchVector" : {"class" : NewSwitchVector,
                          "docs" : "Send new target switch states.",
                          "arg" : listValue,
                          "attributes" : [["device", None, True, nameValue, "Name of Device"],
                                          ["name", None, True, nameValue, "Name of Property"],
                                          ["timestamp", None, False, timeValue, "Moment when this message was generated"]]},
 
-    "newBLOBVector" : {"base" : INDIVector,
+    "newBLOBVector" : {"class" : NewBLOBVector,
                        "docs" : "Send new target BLOBS.",
                        "arg" : listValue,
                        "attributes" : [["device", None, True, nameValue, "Name of Device"],
@@ -417,22 +494,22 @@ indi_spec = {
 
     # Elements describing a vector member value, used in both directions.
 
-    "oneText" : {"base" : INDIElement,
+    "oneText" : {"class" : OneText,
                  "docs" : "One member of a text vector.",
                  "arg" : textValue,
                  "attributes" : [["name", None, True, nameValue, "Name of this text element"]]},
 
-    "oneNumber" : {"base" : INDIElement,
+    "oneNumber" : {"class" : OneNumber,
                    "docs" : "One member of a number vector.",
                    "arg" : numberValue,
                    "attributes" : [["name", None, True, nameValue, "Name of this number element"]]},
 
-    "oneSwitch" : {"base" : INDIElement,
+    "oneSwitch" : {"class" : OneSwitch,
                    "docs" : "One member of a switch vector.",
                    "arg" : switchState,
                    "attributes" : [["name", None, True, nameValue, "Name of this switch element"]]},
 
-    "oneBLOB" : {"base" : INDIElement,
+    "oneBLOB" : {"class" : OneBLOB,
                  "docs" : "One member of a BLOB vector. The contents of this element must always be encoded using base64. The format attribute consists of one or more file name suffixes, each preceded with a period, which indicate how the decoded data is to be interpreted. For example .fits indicates the decoded BLOB is a FITS file, and .fits.z indicates the decoded BLOB is a FITS file compressed with zlib. The INDI protocol places no restrictions on the contents or formats of BLOBs but at minimum astronomical INDI clients are encouraged to support the FITS image file format and the zlib compression mechanism. The size attribute indicates the number of bytes in the final BLOB after decoding and after any decompression. For example, if the format is .fits.z the size attribute is the number of bytes in the FITS file. A Client unfamiliar with the specified format may use the attribute as a simple string, perhaps in combination with the timestamp attribute, to create a file name in which to store the data without processing other than decoding the base64.",
                  "arg" : BLOBValue,
                  "attributes" : [["name", None, True, nameValue, "Name of this BLOB element"],
@@ -479,17 +556,12 @@ def makeINDIFn(indi_type):
             if not attr in all_attr:
                 raise IndiXMLException(attr + " is not an attribute of " + indi_type + ".")
 
-        # Check if we already have a class with the right name.
-        if not hasattr(type_spec, "indi_class"):
-
-            # Use (capitalized) XML command name
-            if not hasattr(type_spec, "class"):
-                type_spec["classname"] = indi_type[0].upper() + indi_type[1:]
-            
-            type_spec["class"] = type(type_spec["classname"], (type_spec["base"],), {})
-
+        # Use indi_type as the XML element type, unless otherwise specified.
+        if not "xml" in type_spec:
+            type_spec["xml"] = indi_type
+        
         # Make an INDI object of this class.
-        return type_spec["class"](type_spec["classname"], fn_arg, final_attr, None)
+        return type_spec["class"](type_spec["xml"], fn_arg, final_attr, None)
 
     # Check if an argument was expected.
     if hasattr(type_spec, "arg"):
@@ -520,8 +592,19 @@ def makeINDIFn(indi_type):
 # The API
 #
 
-def fromINDIXML(xml):
-    pass
+
+# XML parsing of incoming commands.
+
+def parseETree(etree):
+    type_spec = indi_spec[etree.tag]
+    return type_spec["class"](type_spec["xml"], None, None, etree)
+
+def parseINDIXML(xml_string):
+    etree = ElementTree.fromstring(xml_string).getroot()
+    return parseETree(etree)
+
+
+# Create the functions for generating INDI command objects.
 
 deviceGetProperties = makeINDIFn("deviceGetProperties")
 defTextVector = makeINDIFn("defTextVector")
@@ -562,12 +645,12 @@ oneBLOB = makeINDIFn("oneBLOB")
 if (__name__ == "__main__"):
     gp = clientGetProperties(indi_attr = {"version" : "1.0", "name" : "bar"})
     print(gp)
-    print(ElementTree.tostring(gp.toXML(), 'utf-8'))
+    print(gp.toXML())
 
     gp.setAttr("name", "baz")
-    print(ElementTree.tostring(gp.toXML(), 'utf-8'))
+    print(gp.toXML())
 
-    print(gp.getValue())
+    print(parseETree(gp.toETree()))
 
     
     
