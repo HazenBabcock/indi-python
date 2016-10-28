@@ -82,7 +82,7 @@ class INDIElement(INDIBase):
     INDI element command base class.
     """
     def __init__(self, etype, value, attr_dict, etree):
-        INDIBase.__init__(self, etype, value, attr_dict, etree)
+        INDIBase.__init__(self, etype, None, attr_dict, etree)
         self.value = value
 
         if etree is not None:
@@ -104,9 +104,14 @@ class INDIVector(INDIBase):
     """
     INDI vector command base class.
     """
-    def __init__(self, etype, alist, attr_dict, etree):
-        INDIBase.__init__(self, etype, value, attr_dict, etree)
-        self.elt_list = eltlist
+    def __init__(self, etype, elt_list, attr_dict, etree):
+        INDIBase.__init__(self, etype, None, attr_dict, etree)
+        self.elt_list = elt_list
+
+        if etree is not None:
+            self.elt_list = []
+            for node in etree:
+                self.elt_list.append(parseETree(node))
 
         
 # Classes to represent the different commands.
@@ -531,6 +536,10 @@ def makeINDIFn(indi_type):
 
     type_spec = indi_spec[indi_type]
 
+    # Use indi_type as the XML element type, unless otherwise specified.
+    if not "xml" in type_spec:
+        type_spec["xml"] = indi_type
+    
     # Function to make the object.
     def makeObject(fn_arg, fn_attr):
 
@@ -556,10 +565,6 @@ def makeINDIFn(indi_type):
             if not attr in all_attr:
                 raise IndiXMLException(attr + " is not an attribute of " + indi_type + ".")
 
-        # Use indi_type as the XML element type, unless otherwise specified.
-        if not "xml" in type_spec:
-            type_spec["xml"] = indi_type
-        
         # Make an INDI object of this class.
         return type_spec["class"](type_spec["xml"], fn_arg, final_attr, None)
 
@@ -596,7 +601,9 @@ def makeINDIFn(indi_type):
 # XML parsing of incoming commands.
 
 def parseETree(etree):
+    print(etree.tag)
     type_spec = indi_spec[etree.tag]
+#    print(type_spec)
     return type_spec["class"](type_spec["xml"], None, None, etree)
 
 def parseINDIXML(xml_string):
@@ -637,6 +644,8 @@ oneText = makeINDIFn("oneText")
 oneNumber = makeINDIFn("oneNumber")
 oneSwitch = makeINDIFn("oneSwitch")
 oneBLOB = makeINDIFn("oneBLOB")
+
+print("imported")
 
 
 #
