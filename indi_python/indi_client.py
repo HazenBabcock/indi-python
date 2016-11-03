@@ -19,9 +19,11 @@ class INDIClient(QtCore.QObject):
     def __init__(self,
                  address = QtNetwork.QHostAddress(QtNetwork.QHostAddress.LocalHost),
                  port = 7624,
+                 verbose = True,
                  parent = None):
         QtCore.QObject.__init__(self)
         self.message_string = ""
+        self.verbose = verbose
 
         # Create socket.
         self.socket = QtNetwork.QTcpSocket()
@@ -47,18 +49,23 @@ class INDIClient(QtCore.QObject):
         # Get message from socket.
         while self.socket.bytesAvailable():
             self.message_string += str(self.socket.read(1000000))
-            
+
+        # Add closing tag.
         self.message_string += "</data>"
 
+        # Try and parse the message.
         try:
-            print("message length", len(self.message_string))
+            if self.verbose:
+                print("INDIClient: message length " + str(len(self.message_string)) + "bytes.")
             messages = ElementTree.fromstring(self.message_string)
             self.message_string = ""
             for message in messages:
                 self.received.emit(indiXML.parseETree(message))
+
+        # Message is incomplete, remove </data> and wait..
         except ElementTree.ParseError:
-            # Message is incomplete, remove </data> and wait..
-            print("incomplete message")
+            if self.verbose:
+                print("INDIClient: message is not yet complete.")
             self.message_string = self.message_string[:-7]
 
     def send(self, indi_command):
@@ -110,5 +117,4 @@ if (__name__ == "__main__"):
                                         indi_attr = {"name" : "CCD_EXPOSURE", "device" : "CCD Simulator"}))
     time.sleep(1)
     
-    #widget.send(indiXML.newSwitchVector(indi_attr = {"device" : "CCD Simulator"}))    
     sys.exit(app.exec_())
