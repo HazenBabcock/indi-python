@@ -52,6 +52,12 @@ class INDIBase(object):
         else:
             raise IndiXMLException("Dictionary of arguments or XML ElementTree required.")
 
+    def __str__(self):
+        if "name" in self.attr:
+            return self.etype + "(" + self.attr["name"] + ")"
+        else:
+            return self.etype + "()"
+
     def addAttr(self, name, value):
         self.attr[name] = value
 
@@ -86,8 +92,15 @@ class INDIElement(INDIBase):
         self.value = value
 
         if etree is not None:
-            self.value = etree.text
-        
+            self.value = ""
+            if etree.text is not None:
+                self.value = etree.text.strip()
+            else:
+                print("Got None for", self.etype)
+
+    def __str__(self):
+        return INDIBase.__str__(self) + " " + self.value
+    
     def getValue(self):
         return self.value
 
@@ -113,7 +126,19 @@ class INDIVector(INDIBase):
             for node in etree:
                 self.elt_list.append(parseETree(node))
 
-        
+    def __str__(self):
+        elt_str = ""
+        for elt in self.elt_list:
+            elt_str += "  " + str(elt) + "\n"
+        return INDIBase.__str__(self) + "\n" + elt_str
+
+    def toETree(self):
+        etree = INDIBase.toETree(self)
+        for elt in self.elt_list:
+            etree.append(elt.toETree())
+        return etree
+    
+
 # Classes to represent the different commands.
 class GetProperties(INDIBase):
     pass
@@ -145,7 +170,7 @@ class DefLight(INDIElement):
 class DefBLOBVector(INDIVector):
     pass
 
-class DefBLOB(INDIElement):
+class DefBLOB(INDIBase):
     pass
 
 class SetTextVector(INDIVector):
@@ -164,7 +189,12 @@ class SetBLOBVector(INDIVector):
     pass
 
 class Message(INDIBase):
-    pass
+
+    def __str__(self):
+        if "message" in self.attr:
+            return INDIBase.__str__(self) + "\n  " + self.attr["message"]
+        else:
+            return INDIBase.__str__(self) + "\n  empty message.\n"
 
 class DelProperty(INDIBase):
     pass
@@ -197,7 +227,9 @@ class OneSwitch(INDIElement):
     pass
 
 class OneBLOB(INDIElement):
-    pass
+
+    def __str__(self):
+        return INDIBase.__str__(self) + "\n    " + self.attr["size"] + "\n    " + self.attr["format"] + "\n"
 
 
 #
@@ -569,7 +601,7 @@ def makeINDIFn(indi_type):
         return type_spec["class"](type_spec["xml"], fn_arg, final_attr, None)
 
     # Check if an argument was expected.
-    if hasattr(type_spec, "arg"):
+    if "arg" in type_spec:
 
         def ifunction(arg, indi_attr = None):
             
@@ -601,9 +633,7 @@ def makeINDIFn(indi_type):
 # XML parsing of incoming commands.
 
 def parseETree(etree):
-    print(etree.tag)
     type_spec = indi_spec[etree.tag]
-#    print(type_spec)
     return type_spec["class"](type_spec["xml"], None, None, etree)
 
 def parseINDIXML(xml_string):
@@ -645,21 +675,22 @@ oneNumber = makeINDIFn("oneNumber")
 oneSwitch = makeINDIFn("oneSwitch")
 oneBLOB = makeINDIFn("oneBLOB")
 
-print("imported")
-
 
 #
 # Simple tests.
 #
 if (__name__ == "__main__"):
-    gp = clientGetProperties(indi_attr = {"version" : "1.0", "name" : "bar"})
+    #gp = clientGetProperties(indi_attr = {"version" : "1.0", "name" : "bar"})
+    gp = newSwitchVector([oneSwitch("On", indi_attr = {"name" : "CONNECT"})],
+                         indi_attr = {"name" : "CONNECTION", "device" : "CCD Simulator"})
+#    gp = oneSwitch("On", indi_attr = {"name" : "CONNECT"})
     print(gp)
     print(gp.toXML())
-
-    gp.setAttr("name", "baz")
-    print(gp.toXML())
-
-    print(parseETree(gp.toETree()))
+#
+#    gp.setAttr("name", "baz")
+#    print(gp.toXML())
+#
+#    print(parseETree(gp.toETree()))
 
     
     
