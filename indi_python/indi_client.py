@@ -21,6 +21,7 @@ class INDIClient(QtCore.QObject):
                  port = 7624,
                  parent = None):
         QtCore.QObject.__init__(self)
+        self.message_string = ""
 
         # Create socket.
         self.socket = QtNetwork.QTcpSocket()
@@ -39,16 +40,26 @@ class INDIClient(QtCore.QObject):
 
     def handleReadyRead(self):
 
+        # Add starting tag if this is new message.
+        if (len(self.message_string) == 0):
+            self.message_string = "<data>"
+            
         # Get message from socket.
-        message_string = "<data>"
-        while self.socket.canReadLine():
-            message_string += str(self.socket.readLine())
-        message_string += "</data>"
+        while self.socket.bytesAvailable():
+            self.message_string += str(self.socket.read(1000000))
+            
+        self.message_string += "</data>"
 
-        messages = ElementTree.fromstring(message_string)
-        for message in messages:
-            print(indiXML.parseETree(message))
-            #self.received.emit(indi_xml.parseETree(message))
+        try:
+            print("message length", len(self.message_string))
+            messages = ElementTree.fromstring(self.message_string)
+            self.message_string = ""
+            for message in messages:
+                self.received.emit(indiXML.parseETree(message))
+        except ElementTree.ParseError:
+            # Message is incomplete, remove </data> and wait..
+            print("incomplete message")
+            self.message_string = self.message_string[:-7]
 
     def send(self, indi_command):
         if self.socket is not None:
@@ -58,6 +69,7 @@ class INDIClient(QtCore.QObject):
 if (__name__ == "__main__"):
 
     import sys
+    import time
     
     from PyQt5 import QtWidgets
 
@@ -71,8 +83,7 @@ if (__name__ == "__main__"):
             self.client.received.connect(self.handleReceived)
 
         def handleReceived(self, message):
-            pass
-            #self.close()
+            print(message)
 
         def send(self, message):
             self.client.send(message)
@@ -80,5 +91,24 @@ if (__name__ == "__main__"):
     app = QtWidgets.QApplication(sys.argv)
     widget = Widget()
     widget.show()
+
+    # Get a list of devices.
     widget.send(indiXML.clientGetProperties(indi_attr = {"version" : "1.0"}))
+    time.sleep(1)
+
+    # Connect to the CCD simulator.
+    widget.send(indiXML.newSwitchVector([indiXML.oneSwitch("On", indi_attr = {"name" : "CONNECT"})],
+                                        indi_attr = {"name" : "CONNECTION", "device" : "CCD Simulator"}))
+    time.sleep(1)
+
+    # Enable BLOB mode.
+    widget.send(indiXML.enableBLOB("Also", indi_attr = {"device" : "CCD Simulator"}))
+    time.sleep(1)
+
+    # Request image.
+    widget.send(indiXML.newNumberVector([indiXML.oneNumber(1, indi_attr = {"name" : "CCD_EXPOSURE_VALUE"})],
+                                        indi_attr = {"name" : "CCD_EXPOSURE", "device" : "CCD Simulator"}))
+    time.sleep(1)
+    
+    #widget.send(indiXML.newSwitchVector(indi_attr = {"device" : "CCD Simulator"}))    
     sys.exit(app.exec_())
