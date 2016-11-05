@@ -685,7 +685,8 @@ if (__name__ == "__main__"):
                          indi_attr = {"name" : "CONNECTION", "device" : "CCD Simulator"})
 #    gp = oneSwitch("On", indi_attr = {"name" : "CONNECT"})
     print(gp)
-    print(gp.toXML())
+    print(type(gp.toXML()))
+    
 #
 #    gp.setAttr("name", "baz")
 #    print(gp.toXML())

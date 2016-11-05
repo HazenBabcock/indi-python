@@ -48,7 +48,8 @@ class INDIClient(QtCore.QObject):
             
         # Get message from socket.
         while self.socket.bytesAvailable():
-            self.message_string += str(self.socket.read(1000000))
+            tmp = str(self.socket.read(1000000), "ascii")
+            self.message_string += tmp
 
         # Add closing tag.
         self.message_string += "</data>"
@@ -70,7 +71,7 @@ class INDIClient(QtCore.QObject):
 
     def send(self, indi_command):
         if self.socket is not None:
-            self.socket.write(indi_command.toXML() + "\n")
+            self.socket.write(indi_command.toXML() + b'\n')
 
 
 if (__name__ == "__main__"):
@@ -108,13 +109,14 @@ if (__name__ == "__main__"):
                                         indi_attr = {"name" : "CONNECTION", "device" : "CCD Simulator"}))
     time.sleep(1)
 
-    # Enable BLOB mode.
-    widget.send(indiXML.enableBLOB("Also", indi_attr = {"device" : "CCD Simulator"}))
-    time.sleep(1)
-
-    # Request image.
-    widget.send(indiXML.newNumberVector([indiXML.oneNumber(1, indi_attr = {"name" : "CCD_EXPOSURE_VALUE"})],
-                                        indi_attr = {"name" : "CCD_EXPOSURE", "device" : "CCD Simulator"}))
-    time.sleep(1)
+    if False:
+        # Enable BLOB mode.
+        widget.send(indiXML.enableBLOB("Also", indi_attr = {"device" : "CCD Simulator"}))
+        time.sleep(1)
+        
+        # Request image.
+        widget.send(indiXML.newNumberVector([indiXML.oneNumber(1, indi_attr = {"name" : "CCD_EXPOSURE_VALUE"})],
+                                            indi_attr = {"name" : "CCD_EXPOSURE", "device" : "CCD Simulator"}))
+        time.sleep(1)
     
     sys.exit(app.exec_())
