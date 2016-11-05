@@ -26,6 +26,7 @@ Notes:
 
 """
 
+import base64
 import numbers
 from xml.etree import ElementTree
 
@@ -227,7 +228,17 @@ class OneSwitch(INDIElement):
     pass
 
 class OneBLOB(INDIElement):
+    
+    def __init__(self, etype, value, attr_dict, etree):
+        INDIElement.__init__(self, etype, None, attr_dict, etree)
 
+        #
+        # Convert value to bytes from base64 if this object
+        # was created from XML from the indiserver.
+        #
+        if etree is not None:
+            self.value = base64.standard_b64decode(self.value)
+    
     def __str__(self):
         return INDIBase.__str__(self) + "\n    " + self.attr["size"] + "\n    " + self.attr["format"] + "\n"
 
