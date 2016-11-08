@@ -15,12 +15,12 @@ class SimpleFitsException(Exception):
 
 class FitsImage(object):
 
-    def __init__(self, fits_name = None, fits_string = None):
+    def __init__(self, fits_name = None, fits_string = None, verbose = True):
         self.keywords = {}
         self.np_data = None
 
-        if fits_name is None and fits_string is None:
-            raise SimpleFitsException("Must specify a fits file or a string containing a fits images.")
+#        if fits_name is None and fits_string is None:
+#            raise SimpleFitsException("Must specify a fits file or a string containing a fits images.")
 
         if fits_name is not None:
             with open(fits_name, "rb") as fp:
@@ -32,8 +32,9 @@ class FitsImage(object):
 
             record = fits_string[nkw*80:(nkw+1)*80]
             nkw += 1
-            print(record)
-            
+            if verbose:
+                print(record)
+
             if record.startswith(b'END'):
                 break
 
@@ -63,8 +64,9 @@ class FitsImage(object):
             
             # Handle 16bit images.
             if (self.keywords["BITPIX"] == "16"):
-                print("l2", len(fits_string))
-                
+                if verbose:
+                    print(size1, "x", size2, "- 16 bit image")
+
                 # Calculate image size.
                 image_size = size1 * size2 * 2
 
