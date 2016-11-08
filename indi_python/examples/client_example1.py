@@ -13,6 +13,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 
 import indi_python.indi_xml as indiXML
 import indi_python.indi_client as indiClient
+import indi_python.simple_fits as simpleFits
 
 import client_example1_ui as clientExample1Ui
 
@@ -111,6 +112,7 @@ class Window(QtWidgets.QMainWindow):
         
         # Connect signals.
         self.ui.actionQuit.triggered.connect(self.handleQuit)
+        self.ui.capturePushButton.clicked.connect(self.handleCapture)
         self.ui.rangeSlider.rangeChanged.connect(self.handleRangeChange)
 
         range_max = int(self.settings.value("range_max", 200))
@@ -119,6 +121,15 @@ class Window(QtWidgets.QMainWindow):
 #            
         self.ui.rangeSlider.setValues([int(self.settings.value("range_min", 0)), range_max])
 
+        # Connect a (local) indiserver.
+        self.indi_client = indiClient.INDIClient(parent = self)
+        self.indi_client.received.connect(self.handleReceived)
+
+        # Open connection to the CCD simulator and enable BLOB mode.
+        self.indi_client.send(indiXML.newSwitchVector([indiXML.oneSwitch("On", indi_attr = {"name" : "CONNECT"})],
+                                                      indi_attr = {"name" : "CONNECTION", "device" : "CCD Simulator"}))
+        self.indi_client.send(indiXML.enableBLOB("Also", indi_attr = {"device" : "CCD Simulator"}))
+
     def closeEvent(self, event):
         self.settings.setValue("MainWindow/Size", self.size())
         self.settings.setValue("MainWindow/Position", self.pos())
@@ -126,21 +137,33 @@ class Window(QtWidgets.QMainWindow):
         self.settings.setValue("range_max", self.ui.rangeMaxLabel.text())
         self.settings.setValue("range_min", self.ui.rangeMinLabel.text())
 
-#    def handleNewImage(self, sub_image, raw_image):
-#
-#        # Update display.
-#        im_min = int(self.ui.rangeMinLabel.text())
-#        im_max = int(self.ui.rangeMaxLabel.text())
-#        self.camera_display_widget.newImage(sub_image, im_min, im_max)
-#
-#        self.ag_mode.newImage(sub_image, raw_image, self.image_counter)
-#        self.ui.infoLabel.setText(self.ag_mode.getInfo())
-#        
-#        if self.should_idle:
-#            self.setMode("idle")
-#        else:
-#            self.takeImage()
-#            self.image_counter += 1
+    def handleCapture(self, boolean):
+        exp_time = float(self.ui.exposureTimeDoubleSpinBox.value())
+        self.indi_client.send(indiXML.newNumberVector([indiXML.oneNumber(exp_time, indi_attr = {"name" : "CCD_EXPOSURE_VALUE"})],
+                                                      indi_attr = {"name" : "CCD_EXPOSURE", "device" : "CCD Simulator"}))
+        self.ui.capturePushButton.setEnabled(False)
+
+    def handleReceived(self, message):
+        print(message)
+        
+        # Check for image BLOB from CCD1.
+        if isinstance(message, indiXML.SetBLOBVector) and (message.getAttr("name") == "CCD1"):
+            if isinstance(message.getElt(0), indiXML.OneBLOB):
+                np_image = simpleFits.FitsImage(fits_string = message.getElt(0).getValue()).getImage()
+                im_min = int(self.ui.rangeMinLabel.text())
+                im_max = int(self.ui.rangeMaxLabel.text())
+                self.camera_display_widget.newImage(np_image, im_min, im_max)
+                return
+
+        # Check for updated exposure time form CCD1.
+        if isinstance(message, indiXML.SetNumberVector) and (message.getAttr("name") == "CCD_EXPOSURE"):
+            remaining_time = float(message.getElt(0).getValue())
+            if (remaining_time == 0.0):
+                self.ui.capturePushButton.setText("Capture")
+                self.ui.capturePushButton.setEnabled(True)
+            else:
+                self.ui.capturePushButton.setText("{0:.1f}".format(remaining_time))
+            return
 
     def handleQuit(self, boolean):
         self.close()

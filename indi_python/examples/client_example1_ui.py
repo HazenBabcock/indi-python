@@ -2,7 +2,7 @@
 
 # Form implementation generated from reading ui file 'client_example1.ui'
 #
-# Created by: PyQt5 UI code generator 5.5.1
+# Created by: PyQt5 UI code generator 5.7
 #
 # WARNING! All changes made in this file will be lost!
 
@@ -78,12 +78,13 @@ class Ui_MainWindow(object):
         self.exposureTimeLabel = QtWidgets.QLabel(self.centralwidget)
         self.exposureTimeLabel.setObjectName("exposureTimeLabel")
         self.horizontalLayout_2.addWidget(self.exposureTimeLabel)
-        self.doubleSpinBox = QtWidgets.QDoubleSpinBox(self.centralwidget)
-        self.doubleSpinBox.setMinimumSize(QtCore.QSize(100, 0))
-        self.doubleSpinBox.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
-        self.doubleSpinBox.setDecimals(1)
-        self.doubleSpinBox.setObjectName("doubleSpinBox")
-        self.horizontalLayout_2.addWidget(self.doubleSpinBox)
+        self.exposureTimeDoubleSpinBox = QtWidgets.QDoubleSpinBox(self.centralwidget)
+        self.exposureTimeDoubleSpinBox.setMinimumSize(QtCore.QSize(100, 0))
+        self.exposureTimeDoubleSpinBox.setAlignment(QtCore.Qt.AlignRight|QtCore.Qt.AlignTrailing|QtCore.Qt.AlignVCenter)
+        self.exposureTimeDoubleSpinBox.setDecimals(1)
+        self.exposureTimeDoubleSpinBox.setProperty("value", 1.0)
+        self.exposureTimeDoubleSpinBox.setObjectName("exposureTimeDoubleSpinBox")
+        self.horizontalLayout_2.addWidget(self.exposureTimeDoubleSpinBox)
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem)
         self.capturePushButton = QtWidgets.QPushButton(self.centralwidget)
@@ -111,7 +112,7 @@ class Ui_MainWindow(object):
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
-        MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
+        MainWindow.setWindowTitle(_translate("MainWindow", "INDI XML Client Example 1"))
         self.rangeMaxLabel.setText(_translate("MainWindow", "NA"))
         self.rangeMinLabel.setText(_translate("MainWindow", "NA"))
         self.raLabel.setText(_translate("MainWindow", "RA:"))
@@ -119,6 +120,6 @@ class Ui_MainWindow(object):
         self.exposureTimeLabel.setText(_translate("MainWindow", "Exposure Time (s):"))
         self.capturePushButton.setText(_translate("MainWindow", "Capture"))
         self.menuFile.setTitle(_translate("MainWindow", "Fi&le"))
-        self.actionQuit.setText(_translate("MainWindow", "Quit"))
+        self.actionQuit.setText(_translate("MainWindow", "&Quit"))
 
 from qt5RangeSlider import QVRangeSlider
