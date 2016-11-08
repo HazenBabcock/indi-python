@@ -27,11 +27,16 @@ class FitsImage(object):
                 fits_string = fp.read()
 
         # Read out keywords:
-        while not fits_string.startswith(b'END'):
+        nkw = 0
+        while True:
 
-            record = fits_string[:80]
-            fits_string = fits_string[80:]
+            record = fits_string[nkw*80:(nkw+1)*80]
+            nkw += 1
+            print(record)
             
+            if record.startswith(b'END'):
+                break
+
             if record.startswith(b'COMMENT'):
                 continue
 
@@ -39,20 +44,55 @@ class FitsImage(object):
                 record = record.split(b'/')[0]
 
             [keyword, value] = record.split(b'=')
-            keyword = keyword.strip()
-            value = value.strip()
+            keyword = str(keyword.strip(), 'ascii')
+            value = str(value.strip(), 'ascii')
             self.keywords[keyword] = value
 
-        fits_string = fits_string[80:]
+        header_bytes = nkw*80
+
+        # Find the start of the data (a multiple of 2880).
+        data_start = 2880
+        while (data_start < header_bytes):
+            data_start += 2880
         
         # Determine image size
-        
+        if ("NAXIS1" in self.keywords) and ("NAXIS2" in self.keywords):
+
+            size1 = int(self.keywords["NAXIS1"])
+            size2 = int(self.keywords["NAXIS2"])
+            
+            # Handle 16bit images.
+            if (self.keywords["BITPIX"] == "16"):
+                print("l2", len(fits_string))
+                
+                # Calculate image size.
+                image_size = size1 * size2 * 2
+
+                # Create image.
+                self.np_data = numpy.frombuffer(fits_string[data_start:data_start+image_size],
+                                                dtype = numpy.dtype('>i2'))
+                self.np_data = numpy.reshape(self.np_data, ((size2, size1)))
+
+                # Convert to 32 bit integer.
+                self.np_data = self.np_data.astype(numpy.int32)
+
+                # Add offset if specified.
+                if ("BZERO" in self.keywords):
+                    self.np_data += int(self.keywords["BZERO"])
+                
+                return
+
+        raise SimpleFitsException("Unrecognized FITS file type")
+
     def getKeyword(self, keyword):
         return self.keywords[keyword]
         
     def getKeywords(self):
         return self.keywords
-                
+
+    def getImage(self):
+        return self.np_data
+
 
 if (__name__ == "__main__"):
 
@@ -70,3 +110,7 @@ if (__name__ == "__main__"):
     for key in fi.getKeywords():
         print(" ", key, fi.getKeyword(key))
     print("")
+
+    print("Image size is", fi.getImage().shape)
+
+
