@@ -133,6 +133,12 @@ class INDIVector(INDIBase):
             elt_str += "  " + str(elt) + "\n"
         return INDIBase.__str__(self) + "\n" + elt_str
 
+    def getElt(self, index):
+        return self.elt_list[index]
+    
+    def getEltList(self):
+        return self.elt_list
+
     def toETree(self):
         etree = INDIBase.toETree(self)
         for elt in self.elt_list:
