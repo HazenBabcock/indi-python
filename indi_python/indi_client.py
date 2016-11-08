@@ -13,6 +13,10 @@ from PyQt5 import QtCore, QtNetwork
 import indi_python.indi_xml as indiXML
 
 
+class INDIClientException(Exception):
+    pass
+
+
 class INDIClient(QtCore.QObject):
     received = QtCore.pyqtSignal(object) # Received messages as INDI Python objects.
 
@@ -32,6 +36,8 @@ class INDIClient(QtCore.QObject):
 
         # Connect to socket.
         self.socket.connectToHost(address, port)
+        if not self.socket.waitForConnected():
+            raise INDIClientException("Cannot connect to indiserver at " + address.toString() + " port " + str(port))
 
     def disconnect(self):
         if self.socket is not None:
@@ -70,8 +76,10 @@ class INDIClient(QtCore.QObject):
             self.message_string = self.message_string[:-7]
 
     def send(self, indi_command):
-        if self.socket is not None:
+        if (self.socket.state() == QtNetwork.QAbstractSocket.ConnectedState):
             self.socket.write(indi_command.toXML() + b'\n')
+        else:
+            raise INDIClientException("Socket is not connected.")
 
 
 if (__name__ == "__main__"):
@@ -109,7 +117,7 @@ if (__name__ == "__main__"):
                                         indi_attr = {"name" : "CONNECTION", "device" : "CCD Simulator"}))
     time.sleep(1)
 
-    if False:
+    if True:
         # Enable BLOB mode.
         widget.send(indiXML.enableBLOB("Also", indi_attr = {"device" : "CCD Simulator"}))
         time.sleep(1)
