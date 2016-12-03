@@ -55,7 +55,10 @@ class INDIBase(object):
 
     def __str__(self):
         if "name" in self.attr:
-            return self.etype + "(" + self.attr["name"] + ")"
+            if "device" in self.attr:
+                return self.etype + "(" + self.attr["name"] + ", " + self.attr["device"] + ")"
+            else:
+                return self.etype + "(" + self.attr["name"] + ")"
         else:
             return self.etype + "()"
 
