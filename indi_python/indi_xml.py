@@ -26,6 +26,8 @@ Notes:
 
 """
 
+import astropy.coordinates
+import astropy.units
 import base64
 import numbers
 from xml.etree import ElementTree
@@ -55,10 +57,12 @@ class INDIBase(object):
 
     def __str__(self):
         if "name" in self.attr:
+            base_str = self.etype + " (" + self.attr["name"]
             if "device" in self.attr:
-                return self.etype + "(" + self.attr["name"] + ", " + self.attr["device"] + ")"
-            else:
-                return self.etype + "(" + self.attr["name"] + ")"
+                base_str += ", " + self.attr["device"]
+            if "perm" in self.attr:
+                base_str += ", " + self.attr["perm"]
+            return base_str + ")"
         else:
             return self.etype + "()"
 
@@ -284,12 +288,15 @@ def numberFormat(value):
     return value
 
 def numberValue(value):
-    #
-    # FIXME:
-    #    Need to also handle sexagesimal.
-    #
+    # Check if value is a number.
     if not isinstance(value, numbers.Number):
-        raise IndiXMLException(str(value) + " is not a valid number.")
+
+        # Check if value is a sexagesimal string.
+        try:
+            angle = astropy.coordinates.Angle(value, unit = astropy.units.deg)
+        except:
+            raise IndiXMLException(str(value) + " is not a valid number.")
+
     return value
 
 def propertyPerm(value):
