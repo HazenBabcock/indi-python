@@ -5,6 +5,8 @@ Simple example of the use of the indi-python library as a client.
 Hazen 11/16
 """
 
+import astropy.coordinates
+import astropy.units
 import numpy
 import os
 import sys
@@ -93,7 +95,9 @@ class Window(QtWidgets.QMainWindow):
 
     def __init__(self):
         QtWidgets.QMainWindow.__init__(self)
-        
+
+        self.cur_dec = "00:00:00"
+        self.cur_ra = "00:00:00"
         self.settings = QtCore.QSettings("client_example1", "indi_python")
 
         # Configure UI.
@@ -109,16 +113,20 @@ class Window(QtWidgets.QMainWindow):
         # Load settings
         self.resize(self.settings.value("MainWindow/Size", self.size()))
         self.move(self.settings.value("MainWindow/Position", self.pos()))
+        self.cur_dec = self.settings.value("dec", self.cur_dec)
+        self.ui.decLineEdit.setText(self.cur_dec)
+        self.cur_ra = self.settings.value("ra", self.cur_ra)
+        self.ui.raLineEdit.setText(self.cur_ra)                
         
         # Connect signals.
         self.ui.actionQuit.triggered.connect(self.handleQuit)
         self.ui.capturePushButton.clicked.connect(self.handleCapture)
+        self.ui.decLineEdit.textEdited.connect(self.handleDecTextEdited)
+        self.ui.raLineEdit.textEdited.connect(self.handleRaTextEdited)
         self.ui.rangeSlider.rangeChanged.connect(self.handleRangeChange)
 
         range_max = int(self.settings.value("range_max", 200))
-#        if (range_max > self.camera.getMaxIntensity()):
-#            range_max = self.camera.getMaxIntensity()
-#            
+
         self.ui.rangeSlider.setValues([int(self.settings.value("range_min", 0)), range_max])
 
         # Connect a (local) indiserver.
@@ -130,18 +138,53 @@ class Window(QtWidgets.QMainWindow):
                                                       indi_attr = {"name" : "CONNECTION", "device" : "CCD Simulator"}))
         self.indi_client.send(indiXML.enableBLOB("Also", indi_attr = {"device" : "CCD Simulator"}))
 
+        # Open connection to the Telescope simulator.
+        self.indi_client.send(indiXML.newSwitchVector([indiXML.oneSwitch("On", indi_attr = {"name" : "CONNECT"})],
+                                                      indi_attr = {"name" : "CONNECTION", "device" : "Telescope Simulator"}))
+
+        # Change telescope focal length. The aperture parameters does not appear to actually do anything.
+        self.indi_client.send(indiXML.newNumberVector([indiXML.oneNumber(300.0, indi_attr = {"name" : "TELESCOPE_APERTURE"}),
+                                                       indiXML.oneNumber(300.0, indi_attr = {"name" : "TELESCOPE_FOCAL_LENGTH"})],
+                                                      indi_attr = {"name" : "TELESCOPE_INFO", "device" : "Telescope Simulator"}))
+
     def closeEvent(self, event):
         self.settings.setValue("MainWindow/Size", self.size())
         self.settings.setValue("MainWindow/Position", self.pos())
 
+        self.settings.setValue("dec", self.cur_dec)
+        self.settings.setValue("ra", self.cur_ra)
         self.settings.setValue("range_max", self.ui.rangeMaxLabel.text())
         self.settings.setValue("range_min", self.ui.rangeMinLabel.text())
 
     def handleCapture(self, boolean):
+        # Update where the telescope is pointed.
+        self.indi_client.send(indiXML.newNumberVector([indiXML.oneNumber(self.cur_dec, indi_attr = {"name" : "DEC"}),
+                                                       indiXML.oneNumber(self.cur_ra, indi_attr = {"name" : "RA"})],
+                                                      indi_attr = {"name" : "EQUATORIAL_EOD_COORD", "device" : "Telescope Simulator"}))
+
+        # Start capture.
         exp_time = float(self.ui.exposureTimeDoubleSpinBox.value())
         self.indi_client.send(indiXML.newNumberVector([indiXML.oneNumber(exp_time, indi_attr = {"name" : "CCD_EXPOSURE_VALUE"})],
                                                       indi_attr = {"name" : "CCD_EXPOSURE", "device" : "CCD Simulator"}))
         self.ui.capturePushButton.setEnabled(False)
+
+    def handleDecTextEdited(self, new_text):
+        try:
+            angle = astropy.coordinates.Angle(new_text, unit = astropy.units.deg)
+        except ValueError:
+            self.ui.decLineEdit.setStyleSheet("QLineEdit { background : red; }")
+        else:
+            self.ui.decLineEdit.setStyleSheet("QLineEdit { background : white; }")
+            self.cur_dec = angle.to_string(sep=":")
+
+    def handleRaTextEdited(self, new_text):
+        try:
+            angle = astropy.coordinates.Angle(new_text, unit = astropy.units.deg)
+        except ValueError:
+            self.ui.raLineEdit.setStyleSheet("QLineEdit { background : red; }")
+        else:
+            self.ui.raLineEdit.setStyleSheet("QLineEdit { background : white; }")
+            self.cur_ra = angle.to_string(sep=":")            
 
     def handleReceived(self, message):
         print(message)
