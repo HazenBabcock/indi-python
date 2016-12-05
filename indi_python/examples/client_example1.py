@@ -98,14 +98,22 @@ class Window(QtWidgets.QMainWindow):
 
         self.cur_dec = "00:00:00"
         self.cur_ra = "00:00:00"
+        self.moving_timer = QtCore.QTimer()
         self.settings = QtCore.QSettings("client_example1", "indi_python")
 
+        self.moving_timer.setSingleShot(True)
+        self.moving_timer.setInterval(1500)
+        
         # Configure UI.
         self.ui = clientExample1Ui.Ui_MainWindow()
         self.ui.setupUi(self)
 
         self.ui.rangeSlider.setRange([0, 1000, 1])
-        
+
+        # Assume the mount is not to our initial RA, Dec.
+        self.ui.decLineEdit.setStyleSheet("QLineEdit { background : yellow; }")
+        self.ui.raLineEdit.setStyleSheet("QLineEdit { background : yellow; }")
+            
         # Configure display
         self.camera_display_widget = CameraDisplayWidget(self)
         self.ui.cameraScrollArea.setWidget(self.camera_display_widget)
@@ -119,9 +127,12 @@ class Window(QtWidgets.QMainWindow):
         self.ui.raLineEdit.setText(self.cur_ra)                
         
         # Connect signals.
+        self.moving_timer.timeout.connect(self.handleStabilized)
+        
         self.ui.actionQuit.triggered.connect(self.handleQuit)
         self.ui.capturePushButton.clicked.connect(self.handleCapture)
         self.ui.decLineEdit.textEdited.connect(self.handleDecTextEdited)
+        self.ui.gotoPushButton.clicked.connect(self.handleGoTo)
         self.ui.raLineEdit.textEdited.connect(self.handleRaTextEdited)
         self.ui.rangeSlider.rangeChanged.connect(self.handleRangeChange)
 
@@ -157,11 +168,6 @@ class Window(QtWidgets.QMainWindow):
         self.settings.setValue("range_min", self.ui.rangeMinLabel.text())
 
     def handleCapture(self, boolean):
-        # Update where the telescope is pointed.
-        self.indi_client.send(indiXML.newNumberVector([indiXML.oneNumber(self.cur_dec, indi_attr = {"name" : "DEC"}),
-                                                       indiXML.oneNumber(self.cur_ra, indi_attr = {"name" : "RA"})],
-                                                      indi_attr = {"name" : "EQUATORIAL_EOD_COORD", "device" : "Telescope Simulator"}))
-
         # Start capture.
         exp_time = float(self.ui.exposureTimeDoubleSpinBox.value())
         self.indi_client.send(indiXML.newNumberVector([indiXML.oneNumber(exp_time, indi_attr = {"name" : "CCD_EXPOSURE_VALUE"})],
@@ -174,17 +180,28 @@ class Window(QtWidgets.QMainWindow):
         except ValueError:
             self.ui.decLineEdit.setStyleSheet("QLineEdit { background : red; }")
         else:
-            self.ui.decLineEdit.setStyleSheet("QLineEdit { background : white; }")
+            self.ui.decLineEdit.setStyleSheet("QLineEdit { background : yellow; }")
             self.cur_dec = angle.to_string(sep=":")
 
+    def handleGoTo(self, boolean):
+        # Update where the telescope is pointed.
+        self.indi_client.send(indiXML.newNumberVector([indiXML.oneNumber(self.cur_dec, indi_attr = {"name" : "DEC"}),
+                                                       indiXML.oneNumber(self.cur_ra, indi_attr = {"name" : "RA"})],
+                                                      indi_attr = {"name" : "EQUATORIAL_EOD_COORD", "device" : "Telescope Simulator"}))
+
+        # Start moving timer. When this times out we assume that the mount
+        # has stabilized. Note that this timer gets restarted each time we
+        # get an updated position from the mount.
+        self.moving_timer.start()
+        
     def handleRaTextEdited(self, new_text):
         try:
             angle = astropy.coordinates.Angle(new_text, unit = astropy.units.deg)
         except ValueError:
             self.ui.raLineEdit.setStyleSheet("QLineEdit { background : red; }")
         else:
-            self.ui.raLineEdit.setStyleSheet("QLineEdit { background : white; }")
-            self.cur_ra = angle.to_string(sep=":")            
+            self.ui.raLineEdit.setStyleSheet("QLineEdit { background : yellow; }")
+            self.cur_ra = angle.to_string(sep=":")
 
     def handleReceived(self, message):
         print(message)
@@ -208,6 +225,21 @@ class Window(QtWidgets.QMainWindow):
                 self.ui.capturePushButton.setText("{0:.1f}".format(remaining_time))
             return
 
+        # Check for updated position.
+        if isinstance(message, indiXML.SetNumberVector) and (message.getAttr("name") == "EQUATORIAL_EOD_COORD"):
+            self.moving_timer.start()
+            mount_ra = astropy.coordinates.Angle(float(message.getElt(0).getValue()), unit = astropy.units.deg)
+            self.cur_ra = mount_ra.to_string(sep=":")
+            self.ui.raLineEdit.setText(self.cur_ra)
+            
+            mount_dec = astropy.coordinates.Angle(float(message.getElt(1).getValue()), unit = astropy.units.deg)
+            self.cur_dec = mount_dec.to_string(sep=":")
+            self.ui.decLineEdit.setText(self.cur_dec)
+
+    def handleStabilized(self):
+        self.ui.decLineEdit.setStyleSheet("QLineEdit { background : white; }")
+        self.ui.raLineEdit.setStyleSheet("QLineEdit { background : white; }")
+        
     def handleQuit(self, boolean):
         self.close()
 
