@@ -9,10 +9,8 @@ In its current form it is not a drop in replacement for
 [pyindi](https://sourceforge.net/projects/pyindi-client/). Please see the
 examples folder for both client and driver examples.
 
-#### Notes ####
-
-Not complete.
-
 #### Dependencies ####
+
+* [astropy](http://www.astropy.org/)
 * [INDI](http://indilib.org/)
 * [pyqt5](https://riverbankcomputing.com/software/pyqt/intro)
