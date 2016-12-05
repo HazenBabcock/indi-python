@@ -188,6 +188,7 @@ class Window(QtWidgets.QMainWindow):
         self.indi_client.send(indiXML.newNumberVector([indiXML.oneNumber(self.cur_dec, indi_attr = {"name" : "DEC"}),
                                                        indiXML.oneNumber(self.cur_ra, indi_attr = {"name" : "RA"})],
                                                       indi_attr = {"name" : "EQUATORIAL_EOD_COORD", "device" : "Telescope Simulator"}))
+        self.ui.gotoPushButton.setEnabled(False)
 
         # Start moving timer. When this times out we assume that the mount
         # has stabilized. Note that this timer gets restarted each time we
@@ -239,7 +240,8 @@ class Window(QtWidgets.QMainWindow):
     def handleStabilized(self):
         self.ui.decLineEdit.setStyleSheet("QLineEdit { background : white; }")
         self.ui.raLineEdit.setStyleSheet("QLineEdit { background : white; }")
-        
+        self.ui.gotoPushButton.setEnabled(True)
+
     def handleQuit(self, boolean):
         self.close()
 
