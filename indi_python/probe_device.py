@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """
+Contact the requested device and get all of it's properties.
 
-Contacct the requested device and get all of it's properties.
-
+Hazen 02/17
 """
 
 import argparse
@@ -19,7 +19,7 @@ import indi_python.indi_xml as indiXML
 parser = argparse.ArgumentParser(description = 'Queries indiserver to get all the properties of a device')
 
 parser.add_argument('--device', dest='device', type=str, required=True,
-                    help = "The name of the device to probe.")
+                    help = "The name of the device to probe, such as 'Telescope Simulator'")
 parser.add_argument('--ip', dest='ipaddress', type=str, required=False, default="127.0.0.1",
                     help = "The IP address of the INDI server.")
 parser.add_argument('--port', dest='port', type=int, required=False, default=7624,

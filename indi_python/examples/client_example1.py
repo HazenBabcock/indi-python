@@ -144,12 +144,12 @@ class Window(QtWidgets.QMainWindow):
         self.indi_client = indiClient.INDIClient(parent = self)
         self.indi_client.received.connect(self.handleReceived)
 
-        # Open connection to the CCD simulator and enable BLOB mode.
+        # Open connection to the CCD simulator (indi_simulator_ccd) and enable BLOB mode.
         self.indi_client.send(indiXML.newSwitchVector([indiXML.oneSwitch("On", indi_attr = {"name" : "CONNECT"})],
                                                       indi_attr = {"name" : "CONNECTION", "device" : "CCD Simulator"}))
         self.indi_client.send(indiXML.enableBLOB("Also", indi_attr = {"device" : "CCD Simulator"}))
 
-        # Open connection to the Telescope simulator.
+        # Open connection to the Telescope simulator (indi_simulator_telescope).
         self.indi_client.send(indiXML.newSwitchVector([indiXML.oneSwitch("On", indi_attr = {"name" : "CONNECT"})],
                                                       indi_attr = {"name" : "CONNECTION", "device" : "Telescope Simulator"}))
 
