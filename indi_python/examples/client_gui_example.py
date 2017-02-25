@@ -17,7 +17,7 @@ import indi_python.indi_xml as indiXML
 import indi_python.indi_client as indiClient
 import indi_python.simple_fits as simpleFits
 
-import client_example1_ui as clientExample1Ui
+import client_gui_example_ui as clientGuiExampleUi
 
 
 class CameraDisplayWidget(QtWidgets.QWidget):
@@ -105,7 +105,7 @@ class Window(QtWidgets.QMainWindow):
         self.moving_timer.setInterval(1500)
         
         # Configure UI.
-        self.ui = clientExample1Ui.Ui_MainWindow()
+        self.ui = clientGuiExampleUi.Ui_MainWindow()
         self.ui.setupUi(self)
 
         self.ui.rangeSlider.setRange([0, 1000, 1])
