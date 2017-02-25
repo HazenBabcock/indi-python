@@ -54,6 +54,8 @@ class INDIClient(QtCore.QObject):
             
         # Get message from socket.
         while self.socket.bytesAvailable():
+
+            # FIXME: This does not work with Python2.
             tmp = str(self.socket.read(1000000), "ascii")
             self.message_string += tmp
 
