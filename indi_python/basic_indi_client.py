@@ -26,6 +26,10 @@ class BasicIndiClient(object):
         self.connection.close()
         
     def getMessages(self, timeout = None):
+        """
+        This will return 'None' if there were no 
+        messages, or no complete messages.
+        """
         if timeout is None:
             timeout = self.timeout
 
@@ -49,6 +53,7 @@ class BasicIndiClient(object):
             for etree_message in etree_messages:
                 messages.append(indiXML.parseETree(etree_message))
 
+        # Reset if the message could not be parsed.
         except ElementTree.ParseError:
             self.message_string = self.message_string[:-len("</data>")]
 
@@ -57,4 +62,14 @@ class BasicIndiClient(object):
     def sendMessage(self, indi_elt):
         self.connection.write(indi_elt.toXML() + b'\n')
 
+    def waitMessages(self):
+        """
+        This will block until all messages are recieved.
 
+        FIXME: Add maximum wait time / attempts?
+        """
+        messages = self.getMessages()
+        while messages is None:
+            time.sleep(self.timeout)
+            messages = self.getMessages()
+        return messages

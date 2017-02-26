@@ -42,14 +42,11 @@ bic.sendMessage(indiXML.newSwitchVector([indiXML.oneSwitch("On", indi_attr = {"n
 time.sleep(timeout)
 
 # Get all the XML that was sent in response to the above.
-messages = bic.getMessages()
-while messages is None:
-    print("waiting..")
-    time.sleep(timeout)
-    messages = bic.getMessages()
-    
-bic.close()
+messages = bic.waitMessages()
 
 # Print the messages.
 for message in messages:
     print(message)
+
+# Close the connection.
+bic.close()
