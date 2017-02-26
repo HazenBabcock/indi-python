@@ -7,6 +7,7 @@ Hazen 02/17
 
 import argparse
 import fitsio
+import numpy
 import os
 import time
 from xml.etree import ElementTree
@@ -69,14 +70,12 @@ while True:
     messages = bic.waitMessages()
     for message in messages:
         if isinstance(message, indiXML.SetBLOBVector):
-            np_image = simpleFits.FitsImage(fits_string = message.getElt(0).getValue()).getImage()
+            np_image = simpleFits.FitsImage(fits_string = message.getElt(0).getValue()).getImage().astype(numpy.uint16)
     if np_image is not None:
         break
 
 # Save the image.
-if os.path.exists(args.fits):
-    os.remove(args.fits)
-fitsio.write(args.fits, np_image)
+fitsio.write(args.fits, np_image, clobber = True)
 
 # Close the connection.
 bic.close()
