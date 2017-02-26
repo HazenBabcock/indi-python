@@ -6,8 +6,8 @@ Hazen 02/17
 """
 
 import argparse
+import socket
 import sys
-import telnetlib
 import time
 from xml.etree import ElementTree
 
@@ -17,29 +17,33 @@ import indi_python.indi_xml as indiXML
 class BasicIndiClient(object):
 
     def __init__(self, ip_address, port, timeout = 0.5):
-        self.connection = telnetlib.Telnet(ip_address, port, timeout)
-        self.timeout = timeout
+        socket.setdefaulttimeout(timeout)
+        
+        self.a_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.a_socket.connect((ip_address, port))
         
         self.message_string = None
 
     def close(self):
-        self.connection.close()
-        
-    def getMessages(self, timeout = None):
-        """
-        This will return 'None' if there were no 
-        messages, or no complete messages.
-        """
-        if timeout is None:
-            timeout = self.timeout
+        self.a_socket.close()
 
+    def getMessages(self):
+        """
+        This will return 'None' if there were no messages, or no complete 
+        messages. The expectation is that this will then be called again 
+        after some timeout to get the rest of message.
+        """
         # Add starting tag if this is a new message.
         if self.message_string is None:
             self.message_string = "<data>"
 
-        # Get available bytes from socket.
-        response = self.connection.read_until(b"!-#-!-#-!", timeout)
-        self.message_string += response.decode("latin1")
+        # Get as much data as we can from the socket.
+        try:
+            while True:
+                response = self.a_socket.recv(2**20)
+                self.message_string += response.decode("latin1")
+        except socket.timeout:
+            pass
 
         # Add closing tag.
         self.message_string += "</data>"
@@ -60,7 +64,7 @@ class BasicIndiClient(object):
         return messages
 
     def sendMessage(self, indi_elt):
-        self.connection.write(indi_elt.toXML() + b'\n')
+        self.a_socket.send(indi_elt.toXML() + b'\n')
 
     def waitMessages(self):
         """
