@@ -13,11 +13,11 @@ from PyQt5 import QtCore, QtNetwork
 import indi_python.indi_xml as indiXML
 
 
-class INDIClientException(Exception):
+class QtINDIClientException(Exception):
     pass
 
 
-class INDIClient(QtCore.QObject):
+class QtINDIClient(QtCore.QObject):
     received = QtCore.pyqtSignal(object) # Received messages as INDI Python objects.
 
     def __init__(self,
@@ -37,7 +37,7 @@ class INDIClient(QtCore.QObject):
         # Connect to socket.
         self.socket.connectToHost(address, port)
         if not self.socket.waitForConnected():
-            raise INDIClientException("Cannot connect to indiserver at " + address.toString() + " port " + str(port))
+            raise QtINDIClientException("Cannot connect to indiserver at " + address.toString() + " port " + str(port))
 
     def disconnect(self):
         if self.socket is not None:
@@ -81,7 +81,7 @@ class INDIClient(QtCore.QObject):
         if (self.socket.state() == QtNetwork.QAbstractSocket.ConnectedState):
             self.socket.write(indi_command.toXML() + b'\n')
         else:
-            raise INDIClientException("Socket is not connected.")
+            raise QtINDIClientException("Socket is not connected.")
 
 
 if (__name__ == "__main__"):
