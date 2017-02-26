@@ -6,10 +6,7 @@ Hazen 02/17
 """
 
 import argparse
-import sys
-import telnetlib
 import time
-from xml.etree import ElementTree
 
 import indi_python.basic_indi_client as basicIndiClient
 import indi_python.indi_xml as indiXML
