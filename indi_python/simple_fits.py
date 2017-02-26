@@ -57,8 +57,12 @@ class FitsImage(object):
         data_start = 2880
         while (data_start < header_bytes):
             data_start += 2880
-        
-        # Determine image size
+
+        # Check that this is not a color image.
+        if ("NAXIS3" in self.keywords):
+            raise SimpleFitsException("RGB image detected. Image type not set to 'RAW'?")
+            
+        # Determine image size.
         if ("NAXIS1" in self.keywords) and ("NAXIS2" in self.keywords):
 
             size1 = int(self.keywords["NAXIS1"])
