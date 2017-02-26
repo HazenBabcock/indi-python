@@ -14,7 +14,7 @@ import sys
 from PyQt5 import QtCore, QtGui, QtWidgets
 
 import indi_python.indi_xml as indiXML
-import indi_python.indi_client as indiClient
+import indi_python.qt_indi_client as qtIndiClient
 import indi_python.simple_fits as simpleFits
 
 import client_gui_example_ui as clientGuiExampleUi
@@ -141,7 +141,7 @@ class Window(QtWidgets.QMainWindow):
         self.ui.rangeSlider.setValues([int(self.settings.value("range_min", 0)), range_max])
 
         # Connect a (local) indiserver.
-        self.indi_client = indiClient.INDIClient(parent = self)
+        self.indi_client = qtIndiClient.QtINDIClient(parent = self)
         self.indi_client.received.connect(self.handleReceived)
 
         # Open connection to the CCD simulator (indi_simulator_ccd) and enable BLOB mode.
