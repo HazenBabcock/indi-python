@@ -10,7 +10,6 @@ import fitsio
 import numpy
 import os
 import time
-from xml.etree import ElementTree
 
 import indi_python.basic_indi_client as basicIndiClient
 import indi_python.indi_xml as indiXML
@@ -19,10 +18,10 @@ import indi_python.simple_fits as simpleFits
 
 # Parse command line arguments.
 
-parser = argparse.ArgumentParser(description = 'Captures a single image from a Camera')
+parser = argparse.ArgumentParser(description = 'Captures a single image from a camera.')
 
 parser.add_argument('--camera', dest='camera', type=str, required=True,
-                    help = "The name of the camera device")
+                    help = "The name of the camera device.")
 parser.add_argument('--exptime', dest='exptime', type=float, required=False, default="0.1",
                     help = "The exposure time in seconds.")
 parser.add_argument('--fits', dest='fits', type=str, required=False, default="capture.fits",
