@@ -1,7 +1,9 @@
 #!/usr/bin/env python
 """
 A very basic fits file parser. This only handles fits file
-that contain a single (gray-scale) image.
+that contain a single (gray-scale) image. It was designed
+primarily for the purpose of handling images from an 
+INDI server.
 
 Hazen 11/16
 """
@@ -75,11 +77,9 @@ class FitsImage(object):
                                                 dtype = numpy.dtype('>i2'))
                 self.np_data = numpy.reshape(self.np_data, ((size2, size1)))
 
-                # Convert to 32 bit integer.
-                self.np_data = self.np_data.astype(numpy.int32)
-
-                # Add offset if specified.
+                # Add offset if specified. This will also convert to a 32 bit integer.
                 if ("BZERO" in self.keywords):
+                    self.np_data = self.np_data.astype(numpy.int32)
                     self.np_data += int(self.keywords["BZERO"])
                 
                 return
