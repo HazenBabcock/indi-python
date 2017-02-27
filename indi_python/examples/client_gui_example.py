@@ -22,8 +22,8 @@ import client_gui_example_ui as clientGuiExampleUi
 
 class CameraDisplayWidget(QtWidgets.QWidget):
 
-    def __init__(self, parent):
-        QtWidgets.QWidget.__init__(self, parent)
+    def __init__(self, **kwds):
+        super().__init__(**kwds)
 
         self.im_min = None
         self.im_max = None
@@ -93,8 +93,8 @@ class CameraDisplayWidget(QtWidgets.QWidget):
             
 class Window(QtWidgets.QMainWindow):
 
-    def __init__(self):
-        QtWidgets.QMainWindow.__init__(self)
+    def __init__(self, **kwds):
+        super().__init__(**kwds)
 
         self.cur_dec = "00:00:00"
         self.cur_ra = "00:00:00"
@@ -115,7 +115,7 @@ class Window(QtWidgets.QMainWindow):
         self.ui.raLineEdit.setStyleSheet("QLineEdit { background : yellow; }")
             
         # Configure display
-        self.camera_display_widget = CameraDisplayWidget(self)
+        self.camera_display_widget = CameraDisplayWidget(parent = self)
         self.ui.cameraScrollArea.setWidget(self.camera_display_widget)
         
         # Load settings
@@ -145,18 +145,18 @@ class Window(QtWidgets.QMainWindow):
         self.indi_client.received.connect(self.handleReceived)
 
         # Open connection to the CCD simulator (indi_simulator_ccd) and enable BLOB mode.
-        self.indi_client.send(indiXML.newSwitchVector([indiXML.oneSwitch("On", indi_attr = {"name" : "CONNECT"})],
-                                                      indi_attr = {"name" : "CONNECTION", "device" : "CCD Simulator"}))
-        self.indi_client.send(indiXML.enableBLOB("Also", indi_attr = {"device" : "CCD Simulator"}))
+        self.indi_client.sendMessage(indiXML.newSwitchVector([indiXML.oneSwitch("On", indi_attr = {"name" : "CONNECT"})],
+                                                             indi_attr = {"name" : "CONNECTION", "device" : "CCD Simulator"}))
+        self.indi_client.sendMessage(indiXML.enableBLOB("Also", indi_attr = {"device" : "CCD Simulator"}))
 
         # Open connection to the Telescope simulator (indi_simulator_telescope).
-        self.indi_client.send(indiXML.newSwitchVector([indiXML.oneSwitch("On", indi_attr = {"name" : "CONNECT"})],
-                                                      indi_attr = {"name" : "CONNECTION", "device" : "Telescope Simulator"}))
+        self.indi_client.sendMessage(indiXML.newSwitchVector([indiXML.oneSwitch("On", indi_attr = {"name" : "CONNECT"})],
+                                                             indi_attr = {"name" : "CONNECTION", "device" : "Telescope Simulator"}))
 
         # Change telescope focal length. The aperture parameters does not appear to actually do anything.
-        self.indi_client.send(indiXML.newNumberVector([indiXML.oneNumber(300.0, indi_attr = {"name" : "TELESCOPE_APERTURE"}),
-                                                       indiXML.oneNumber(300.0, indi_attr = {"name" : "TELESCOPE_FOCAL_LENGTH"})],
-                                                      indi_attr = {"name" : "TELESCOPE_INFO", "device" : "Telescope Simulator"}))
+        self.indi_client.sendMessage(indiXML.newNumberVector([indiXML.oneNumber(300.0, indi_attr = {"name" : "TELESCOPE_APERTURE"}),
+                                                              indiXML.oneNumber(300.0, indi_attr = {"name" : "TELESCOPE_FOCAL_LENGTH"})],
+                                                             indi_attr = {"name" : "TELESCOPE_INFO", "device" : "Telescope Simulator"}))
 
     def closeEvent(self, event):
         self.settings.setValue("MainWindow/Size", self.size())
@@ -170,8 +170,8 @@ class Window(QtWidgets.QMainWindow):
     def handleCapture(self, boolean):
         # Start capture.
         exp_time = float(self.ui.exposureTimeDoubleSpinBox.value())
-        self.indi_client.send(indiXML.newNumberVector([indiXML.oneNumber(exp_time, indi_attr = {"name" : "CCD_EXPOSURE_VALUE"})],
-                                                      indi_attr = {"name" : "CCD_EXPOSURE", "device" : "CCD Simulator"}))
+        self.indi_client.sendMessage(indiXML.newNumberVector([indiXML.oneNumber(exp_time, indi_attr = {"name" : "CCD_EXPOSURE_VALUE"})],
+                                                             indi_attr = {"name" : "CCD_EXPOSURE", "device" : "CCD Simulator"}))
         self.ui.capturePushButton.setEnabled(False)
 
     def handleDecTextEdited(self, new_text):
@@ -185,9 +185,9 @@ class Window(QtWidgets.QMainWindow):
 
     def handleGoTo(self, boolean):
         # Update where the telescope is pointed.
-        self.indi_client.send(indiXML.newNumberVector([indiXML.oneNumber(self.cur_dec, indi_attr = {"name" : "DEC"}),
-                                                       indiXML.oneNumber(self.cur_ra, indi_attr = {"name" : "RA"})],
-                                                      indi_attr = {"name" : "EQUATORIAL_EOD_COORD", "device" : "Telescope Simulator"}))
+        self.indi_client.sendMessage(indiXML.newNumberVector([indiXML.oneNumber(self.cur_dec, indi_attr = {"name" : "DEC"}),
+                                                              indiXML.oneNumber(self.cur_ra, indi_attr = {"name" : "RA"})],
+                                                             indi_attr = {"name" : "EQUATORIAL_EOD_COORD", "device" : "Telescope Simulator"}))
         self.ui.gotoPushButton.setEnabled(False)
 
         # Start moving timer. When this times out we assume that the mount
