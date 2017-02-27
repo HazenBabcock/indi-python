@@ -24,8 +24,9 @@ class QtINDIClient(QtCore.QObject):
                  address = QtNetwork.QHostAddress(QtNetwork.QHostAddress.LocalHost),
                  port = 7624,
                  verbose = True,
-                 parent = None):
-        QtCore.QObject.__init__(self)
+                 **kwds):
+        super().__init__(**kwds)
+
         self.message_string = ""
         self.verbose = verbose
 
@@ -77,7 +78,7 @@ class QtINDIClient(QtCore.QObject):
                 print("INDIClient: message is not yet complete.")
             self.message_string = self.message_string[:-7]
 
-    def send(self, indi_command):
+    def sendMessage(self, indi_command):
         if (self.socket.state() == QtNetwork.QAbstractSocket.ConnectedState):
             self.socket.write(indi_command.toXML() + b'\n')
         else:
