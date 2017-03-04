@@ -15,6 +15,19 @@ class SimpleFitsException(Exception):
     pass
 
 
+def parseValue(string):
+    """
+    Try to convert a numeric string to an integer or a float.
+    """
+    try:
+        return int(string)
+    except ValueError:
+        try:
+            return float(string)
+        except ValueError:
+            return string[1:-1]
+
+        
 class FitsImage(object):
 
     def __init__(self, fits_name = None, fits_string = None, verbose = True):
@@ -49,7 +62,7 @@ class FitsImage(object):
             [keyword, value] = record.split(b'=')
             keyword = str(keyword.strip(), 'ascii')
             value = str(value.strip(), 'ascii')
-            self.keywords[keyword] = value
+            self.keywords[keyword] = parseValue(value)
 
         header_bytes = nkw*80
 
@@ -65,11 +78,11 @@ class FitsImage(object):
         # Determine image size.
         if ("NAXIS1" in self.keywords) and ("NAXIS2" in self.keywords):
 
-            size1 = int(self.keywords["NAXIS1"])
-            size2 = int(self.keywords["NAXIS2"])
+            size1 = self.keywords["NAXIS1"]
+            size2 = self.keywords["NAXIS2"]
             
             # Handle 16bit images.
-            if (self.keywords["BITPIX"] == "16"):
+            if (self.keywords["BITPIX"] == 16):
                 if verbose:
                     print(size1, "x", size2, "- 16 bit image")
 
@@ -84,7 +97,8 @@ class FitsImage(object):
                 # Add offset if specified. This will also convert to a 32 bit integer.
                 if ("BZERO" in self.keywords):
                     self.np_data = self.np_data.astype(numpy.int32)
-                    self.np_data += int(self.keywords["BZERO"])
+                    self.np_data += self.keywords["BZERO"]
+                    self.keywords["BZERO"] = 0
                 
                 return
 
