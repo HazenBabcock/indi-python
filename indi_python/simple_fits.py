@@ -93,12 +93,6 @@ class FitsImage(object):
                 self.np_data = numpy.frombuffer(fits_string[data_start:data_start+image_size],
                                                 dtype = numpy.dtype('>i2'))
                 self.np_data = numpy.reshape(self.np_data, ((size2, size1)))
-
-                # Add offset if specified. This will also convert to a 32 bit integer.
-                if ("BZERO" in self.keywords):
-                    self.np_data = self.np_data.astype(numpy.int32)
-                    self.np_data += self.keywords["BZERO"]
-                    self.keywords["BZERO"] = 0
                 
                 return
 
@@ -111,7 +105,10 @@ class FitsImage(object):
         return self.keywords
 
     def getImage(self):
-        return self.np_data
+        if ("BZERO" in self.keywords):
+            return self.np_data + self.keywords["BZERO"]
+        else:
+            return self.np_data
 
 
 if (__name__ == "__main__"):
