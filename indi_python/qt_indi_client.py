@@ -27,6 +27,7 @@ class QtINDIClient(QtCore.QObject):
                  **kwds):
         super().__init__(**kwds)
 
+        self.device = None
         self.message_string = ""
         self.verbose = verbose
 
@@ -70,13 +71,25 @@ class QtINDIClient(QtCore.QObject):
             messages = ElementTree.fromstring(self.message_string)
             self.message_string = ""
             for message in messages:
-                self.received.emit(indiXML.parseETree(message))
+                xml_message = indiXML.parseETree(message)
+                
+                # Filter message is self.device is not None.
+                if self.device is not None:
+                    if (self.device == xml_message.getAttr("device")):
+                        self.received.emit(xml_message)
+
+                # Otherwise just send them all.
+                else:
+                    self.received.emit(xml_message)
 
         # Message is incomplete, remove </data> and wait..
         except ElementTree.ParseError:
             if self.verbose:
                 print("INDIClient: message is not yet complete.")
             self.message_string = self.message_string[:-7]
+
+    def setDevice(self, device = None):
+        self.device = device
 
     def sendMessage(self, indi_command):
         if (self.socket.state() == QtNetwork.QAbstractSocket.ConnectedState):

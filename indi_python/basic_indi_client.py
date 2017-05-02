@@ -18,10 +18,11 @@ class BasicIndiClient(object):
 
     def __init__(self, ip_address, port, timeout = 0.5):
         socket.setdefaulttimeout(timeout)
-        
+
         self.a_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.a_socket.connect((ip_address, port))
-        
+
+        self.device = None
         self.message_string = None
 
     def close(self):
@@ -55,7 +56,16 @@ class BasicIndiClient(object):
             self.message_string = None
             messages = []
             for etree_message in etree_messages:
-                messages.append(indiXML.parseETree(etree_message))
+                xml_message = indiXML.parseETree(etree_message)
+
+                # Filter message is self.device is not None.
+                if self.device is not None:
+                    if (self.device == xml_message.getAttr("device")):
+                        messages.append(xml_message)
+
+                # Otherwise just keep them all.
+                else:
+                    messages.append(xml_message)
 
         # Reset if the message could not be parsed.
         except ElementTree.ParseError:
@@ -66,6 +76,9 @@ class BasicIndiClient(object):
     def sendMessage(self, indi_elt):
         self.a_socket.send(indi_elt.toXML() + b'\n')
 
+    def setDevice(self, device = None):
+        self.device = device
+        
     def waitMessages(self):
         """
         This will block until all messages are recieved.
