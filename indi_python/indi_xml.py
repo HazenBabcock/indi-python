@@ -107,8 +107,11 @@ class INDIElement(INDIBase):
                 print("Got None for", self.etype)
 
     def __str__(self):
-        return INDIBase.__str__(self) + " " + self.value
-    
+        base_str = INDIBase.__str__(self)
+        if "label" in self.attr:
+            base_str += " '" + self.attr["label"] + "'"
+        return base_str + " " + self.value
+
     def getValue(self):
         return self.value
 
