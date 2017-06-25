@@ -39,7 +39,7 @@ class QtINDIClient(QtCore.QObject):
         # Connect to socket.
         self.socket.connectToHost(address, port)
         if not self.socket.waitForConnected():
-            raise QtINDIClientException("Cannot connect to indiserver at " + address.toString() + " port " + str(port))
+            raise QtINDIClientException("Cannot connect to indiserver at " + address + ", port " + str(port))
 
     def disconnect(self):
         if self.socket is not None:
