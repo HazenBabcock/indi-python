@@ -93,11 +93,14 @@ class FitsImage(object):
                 self.np_data = numpy.frombuffer(fits_string[data_start:data_start+image_size],
                                                 dtype = numpy.dtype('>i2'))
                 self.np_data = numpy.reshape(self.np_data, ((size2, size1)))
-                
+
                 return
 
         raise SimpleFitsException("Unrecognized FITS file type")
 
+    def hasKeyword(self, keyword):
+        return keyword in self.keywords
+    
     def getKeyword(self, keyword):
         return self.keywords[keyword]
         
