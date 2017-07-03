@@ -26,14 +26,16 @@ parser.add_argument('--port', dest='port', type=int, required=False, default=762
 args = parser.parse_args()
 
 # Create client.
-timeout = 0.5
+timeout = 1.0
 bic = basicIndiClient.BasicIndiClient(args.ipaddress, args.port, timeout)
 
 # Query device
+print("querying..")
 bic.sendMessage(indiXML.clientGetProperties(indi_attr = {"version" : "1.0", "device" : args.device}))
 time.sleep(timeout)
 
 # Connect to user requested device.
+print("connecting..")
 bic.sendMessage(indiXML.newSwitchVector([indiXML.oneSwitch("On", indi_attr = {"name" : "CONNECT"})],
                                         indi_attr = {"name" : "CONNECTION", "device" : args.device}))
 time.sleep(timeout)
